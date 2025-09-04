@@ -1,0 +1,126 @@
+import { useEffect, useRef, useCallback } from "react";
+import { GameEngine } from "../lib/gameEngine/GameEngine";
+import { useGameState } from "../lib/stores/useGameState";
+
+export default function GameCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gameEngineRef = useRef<GameEngine | null>(null);
+  const animationFrameRef = useRef<number>();
+  const { gamePhase, setScore, endGame } = useGameState();
+
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Initialize game engine
+    const gameEngine = new GameEngine(ctx, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+    gameEngineRef.current = gameEngine;
+
+    // Game loop
+    const gameLoop = () => {
+      if (gamePhase === "playing") {
+        const gameState = gameEngine.update();
+        
+        setScore(gameState.score);
+        
+        if (gameState.gameOver) {
+          endGame();
+          return;
+        }
+      }
+      
+      gameEngine.render();
+      animationFrameRef.current = requestAnimationFrame(gameLoop);
+    };
+
+    gameLoop();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [gamePhase, resizeCanvas, setScore, endGame]);
+
+  useEffect(() => {
+    if (gameEngineRef.current) {
+      if (gamePhase === "ready") {
+        gameEngineRef.current.reset();
+      }
+    }
+  }, [gamePhase]);
+
+  // Handle keyboard input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!gameEngineRef.current) return;
+      
+      switch (e.code) {
+        case 'ArrowLeft':
+        case 'KeyA':
+          gameEngineRef.current.player.moveLeft = true;
+          e.preventDefault();
+          break;
+        case 'ArrowRight':
+        case 'KeyD':
+          gameEngineRef.current.player.moveRight = true;
+          e.preventDefault();
+          break;
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!gameEngineRef.current) return;
+      
+      switch (e.code) {
+        case 'ArrowLeft':
+        case 'KeyA':
+          gameEngineRef.current.player.moveLeft = false;
+          e.preventDefault();
+          break;
+        case 'ArrowRight':
+        case 'KeyD':
+          gameEngineRef.current.player.moveRight = false;
+          e.preventDefault();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full"
+      style={{ touchAction: 'none' }}
+    />
+  );
+}
