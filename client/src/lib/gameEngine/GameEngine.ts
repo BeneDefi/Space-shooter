@@ -7,6 +7,9 @@ import { CollisionSystem } from "./CollisionSystem";
 export interface GameState {
   score: number;
   lives: number;
+  level: number;
+  enemiesKilled: number;
+  levelProgress: number;
   gameOver: boolean;
 }
 
@@ -20,10 +23,19 @@ export class GameEngine {
   
   private score = 0;
   private lives = 3;
+  private level = 1;
+  private enemiesKilled = 0;
   private gameOver = false;
   
+  // Level progression settings
+  private readonly ENEMIES_PER_LEVEL = 10; // Enemies to kill to advance level
+  
+  // Dynamic difficulty settings (adjusted per level)
   private enemySpawnTimer = 0;
-  private enemySpawnDelay = 120; // frames
+  private enemySpawnDelay = 120; // frames (gets faster each level)
+  private readonly BASE_ENEMY_SPAWN_DELAY = 120;
+  private readonly MIN_ENEMY_SPAWN_DELAY = 30;
+  
   private playerFireTimer = 0;
   private playerFireDelay = 15; // frames
   
@@ -66,14 +78,26 @@ export class GameEngine {
     this.particles = [];
     this.score = 0;
     this.lives = 3;
+    this.level = 1;
+    this.enemiesKilled = 0;
     this.gameOver = false;
     this.enemySpawnTimer = 0;
     this.playerFireTimer = 0;
+    
+    // Reset difficulty settings
+    this.enemySpawnDelay = this.BASE_ENEMY_SPAWN_DELAY;
   }
 
   public update(): GameState {
     if (this.gameOver) {
-      return { score: this.score, lives: this.lives, gameOver: this.gameOver };
+      return { 
+        score: this.score, 
+        lives: this.lives, 
+        level: this.level,
+        enemiesKilled: this.enemiesKilled,
+        levelProgress: (this.enemiesKilled % this.ENEMIES_PER_LEVEL) / this.ENEMIES_PER_LEVEL,
+        gameOver: this.gameOver 
+      };
     }
 
     // Update player
@@ -94,15 +118,14 @@ export class GameEngine {
       this.playerFireTimer = 0;
     }
 
-    // Spawn enemies
+    // Spawn enemies with level-based difficulty
     this.enemySpawnTimer++;
     if (this.enemySpawnTimer >= this.enemySpawnDelay) {
       const x = Math.random() * (this.width - 40) + 20;
-      this.enemies.push(new Enemy(x, -20, 30, 20, 1));
+      // Enemy speed increases with level
+      const enemySpeed = 1 + (this.level - 1) * 0.3; 
+      this.enemies.push(new Enemy(x, -20, 30, 20, enemySpeed));
       this.enemySpawnTimer = 0;
-      
-      // Gradually increase spawn rate
-      this.enemySpawnDelay = Math.max(60, this.enemySpawnDelay - 1);
     }
 
     // Update enemies and their bullets
@@ -116,13 +139,14 @@ export class GameEngine {
         continue;
       }
 
-      // Enemy occasionally fires
-      if (Math.random() < 0.005) {
+      // Enemy firing frequency increases with level
+      const enemyFireChance = 0.003 + (this.level - 1) * 0.002; // More bullets per level
+      if (Math.random() < enemyFireChance) {
         this.enemyBullets.push(new Bullet(
           enemy.x,
           enemy.y + enemy.height / 2,
           0,
-          4,
+          4 + (this.level - 1) * 0.5, // Bullet speed increases with level
           2,
           '#ff0000',
           'enemy'
@@ -145,7 +169,14 @@ export class GameEngine {
     // Handle collisions
     this.handleCollisions();
 
-    return { score: this.score, lives: this.lives, gameOver: this.gameOver };
+    return { 
+      score: this.score, 
+      lives: this.lives, 
+      level: this.level,
+      enemiesKilled: this.enemiesKilled,
+      levelProgress: (this.enemiesKilled % this.ENEMIES_PER_LEVEL) / this.ENEMIES_PER_LEVEL,
+      gameOver: this.gameOver 
+    };
   }
 
   private updateBullets(bullets: Bullet[]) {
@@ -175,8 +206,12 @@ export class GameEngine {
           this.playerBullets.splice(i, 1);
           this.enemies.splice(j, 1);
           
-          // Update score
-          this.score += 100;
+          // Update score and enemy kill count
+          this.score += 3 + (this.level - 1) * 4; // More points per level
+          this.enemiesKilled++;
+          
+          // Check for level progression
+          this.checkLevelProgression();
           
           // Play hit sound
           window.dispatchEvent(new CustomEvent('playHitSound'));
@@ -232,6 +267,32 @@ export class GameEngine {
         break;
       }
     }
+  }
+
+  private checkLevelProgression() {
+    // Check if enough enemies killed to advance level
+    if (this.enemiesKilled >= this.level * this.ENEMIES_PER_LEVEL) {
+      this.level++;
+      
+      // Update difficulty settings for new level
+      this.updateDifficulty();
+      
+      // Dispatch level up event for UI feedback
+      window.dispatchEvent(new CustomEvent('levelUp', { 
+        detail: { level: this.level, score: this.score } 
+      }));
+      
+      // Play success sound
+      window.dispatchEvent(new CustomEvent('playSuccessSound'));
+    }
+  }
+
+  private updateDifficulty() {
+    // Decrease spawn delay (increase spawn rate) but don't go below minimum
+    this.enemySpawnDelay = Math.max(
+      this.MIN_ENEMY_SPAWN_DELAY,
+      this.BASE_ENEMY_SPAWN_DELAY - (this.level - 1) * 15
+    );
   }
 
   private createExplosion(x: number, y: number, color: string) {

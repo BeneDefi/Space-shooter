@@ -16,6 +16,7 @@ interface GameState {
   restartGame: () => void;
   setScore: (score: number) => void;
   setLives: (lives: number) => void;
+  setLevel: (level: number) => void;
   incrementLevel: () => void;
 }
 
@@ -37,5 +38,6 @@ export const useGameState = create<GameState>((set) => ({
   }),
   setScore: (score: number) => set({ score }),
   setLives: (lives: number) => set({ lives }),
+  setLevel: (level: number) => set({ level }),
   incrementLevel: () => set((state) => ({ level: state.level + 1 })),
 }));

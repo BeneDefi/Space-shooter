@@ -22,6 +22,7 @@ export default function GameCanvas() {
     }
   }, []);
 
+  // Initialize game engine once
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -32,14 +33,24 @@ export default function GameCanvas() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Initialize game engine
-    const gameEngine = new GameEngine(ctx, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
-    gameEngineRef.current = gameEngine;
+    // Initialize game engine only once
+    if (!gameEngineRef.current) {
+      const gameEngine = new GameEngine(ctx, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+      gameEngineRef.current = gameEngine;
+    }
 
-    // Game loop
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, [resizeCanvas]);
+
+  // Game loop effect
+  useEffect(() => {
+    if (!gameEngineRef.current) return;
+
     const gameLoop = () => {
       if (gamePhase === "playing") {
-        const gameState = gameEngine.update();
+        const gameState = gameEngineRef.current!.update();
         
         setScore(gameState.score);
         
@@ -49,19 +60,18 @@ export default function GameCanvas() {
         }
       }
       
-      gameEngine.render();
+      gameEngineRef.current!.render();
       animationFrameRef.current = requestAnimationFrame(gameLoop);
     };
 
     gameLoop();
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [gamePhase, resizeCanvas, setScore, endGame]);
+  }, [gamePhase, setScore, endGame]);
 
   useEffect(() => {
     if (gameEngineRef.current) {
