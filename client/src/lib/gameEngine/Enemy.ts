@@ -8,6 +8,8 @@ export class Enemy {
 
   private oscillationOffset: number;
   private oscillationSpeed: number = 0.02;
+  private static enemyImage: HTMLImageElement | null = null;
+  private static imageLoaded: boolean = false;
 
   constructor(x: number, y: number, width: number, height: number, speed: number) {
     this.x = x;
@@ -17,6 +19,23 @@ export class Enemy {
     this.speed = speed;
     this.health = 1;
     this.oscillationOffset = Math.random() * Math.PI * 2;
+    
+    // Load enemy image if not already loaded
+    if (!Enemy.enemyImage) {
+      Enemy.loadImage();
+    }
+  }
+
+  private static loadImage() {
+    Enemy.enemyImage = new Image();
+    Enemy.enemyImage.onload = () => {
+      Enemy.imageLoaded = true;
+      console.log('Enemy spaceship image loaded successfully');
+    };
+    Enemy.enemyImage.onerror = () => {
+      console.error('Failed to load enemy spaceship image');
+    };
+    Enemy.enemyImage.src = '/enemy-spaceship.png';
   }
 
   public update(canvasWidth: number, canvasHeight: number) {
@@ -33,17 +52,28 @@ export class Enemy {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    // Draw enemy body
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+    if (Enemy.imageLoaded && Enemy.enemyImage) {
+      // Draw the enemy spaceship image
+      ctx.drawImage(
+        Enemy.enemyImage,
+        -this.width / 2,
+        -this.height / 2,
+        this.width,
+        this.height
+      );
+    } else {
+      // Fallback to red rectangle if image isn't loaded yet
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
 
-    // Draw enemy details
-    ctx.fillStyle = '#aa0000';
-    ctx.fillRect(-this.width / 4, this.height / 2 - 5, this.width / 2, 5);
-    
-    // Draw antenna/weapon
-    ctx.fillStyle = '#ffff00';
-    ctx.fillRect(-2, -this.height / 2 - 5, 4, 5);
+      // Draw enemy details
+      ctx.fillStyle = '#aa0000';
+      ctx.fillRect(-this.width / 4, this.height / 2 - 5, this.width / 2, 5);
+      
+      // Draw antenna/weapon
+      ctx.fillStyle = '#ffff00';
+      ctx.fillRect(-2, -this.height / 2 - 5, 4, 5);
+    }
 
     ctx.restore();
   }

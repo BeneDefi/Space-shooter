@@ -7,7 +7,7 @@ import { useAudio } from "../lib/stores/useAudio";
 
 export default function Game() {
   const { gamePhase, startGame } = useGameState();
-  const { backgroundMusic, isMuted } = useAudio();
+  const { backgroundMusic, isMuted, playShoot, playGameOver } = useAudio();
   const musicStarted = useRef(false);
 
   useEffect(() => {
@@ -16,7 +16,26 @@ export default function Game() {
       backgroundMusic.play().catch(console.log);
       musicStarted.current = true;
     }
-  }, [gamePhase, backgroundMusic, isMuted]);
+    
+    // Play game over sound when game ends
+    if (gamePhase === "ended") {
+      playGameOver();
+      musicStarted.current = false; // Reset for next game
+    }
+  }, [gamePhase, backgroundMusic, isMuted, playGameOver]);
+
+  useEffect(() => {
+    // Listen for shoot sound events from game engine
+    const handleShootSound = () => {
+      playShoot();
+    };
+    
+    window.addEventListener('playShootSound', handleShootSound);
+    
+    return () => {
+      window.removeEventListener('playShootSound', handleShootSound);
+    };
+  }, [playShoot]);
 
   const handleStart = () => {
     startGame();

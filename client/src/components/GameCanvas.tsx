@@ -6,7 +6,7 @@ export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameEngineRef = useRef<GameEngine | null>(null);
   const animationFrameRef = useRef<number>();
-  const { gamePhase, setScore, endGame } = useGameState();
+  const { gamePhase, setScore, setLevel, setLives, endGame } = useGameState();
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -53,6 +53,8 @@ export default function GameCanvas() {
         const gameState = gameEngineRef.current!.update();
         
         setScore(gameState.score);
+        setLevel(gameState.level);
+        setLives(gameState.lives);
         
         if (gameState.gameOver) {
           endGame();
@@ -71,7 +73,7 @@ export default function GameCanvas() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [gamePhase, setScore, endGame]);
+  }, [gamePhase, setScore, setLevel, setLives, endGame]);
 
   useEffect(() => {
     if (gameEngineRef.current) {

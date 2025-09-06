@@ -116,6 +116,9 @@ export class GameEngine {
         'player'
       ));
       this.playerFireTimer = 0;
+      
+      // Play shoot sound
+      window.dispatchEvent(new CustomEvent('playShootSound'));
     }
 
     // Spawn enemies with level-based difficulty
@@ -151,6 +154,9 @@ export class GameEngine {
           '#ff0000',
           'enemy'
         ));
+        
+        // Play enemy shoot sound (quieter)
+        window.dispatchEvent(new CustomEvent('playShootSound'));
       }
     }
 

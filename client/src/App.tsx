@@ -5,13 +5,15 @@ import "@fontsource/inter";
 import "./index.css";
 
 function App() {
-  const { setBackgroundMusic, setHitSound, setSuccessSound } = useAudio();
+  const { setBackgroundMusic, setHitSound, setSuccessSound, setShootSound, setGameOverSound } = useAudio();
 
   useEffect(() => {
     // Initialize audio elements
     const backgroundMusic = new Audio("/sounds/background.mp3");
     const hitSound = new Audio("/sounds/hit.mp3");
     const successSound = new Audio("/sounds/success.mp3");
+    const shootSound = new Audio("/sounds/hit.mp3"); // Use hit sound for shooting with different settings
+    const gameOverSound = new Audio("/sounds/success.mp3"); // Use success sound for game over with different settings
 
     backgroundMusic.loop = true;
     backgroundMusic.volume = 0.3;
@@ -19,7 +21,9 @@ function App() {
     setBackgroundMusic(backgroundMusic);
     setHitSound(hitSound);
     setSuccessSound(successSound);
-  }, [setBackgroundMusic, setHitSound, setSuccessSound]);
+    setShootSound(shootSound);
+    setGameOverSound(gameOverSound);
+  }, [setBackgroundMusic, setHitSound, setSuccessSound, setShootSound, setGameOverSound]);
 
   return (
     <div className="w-full h-full bg-black overflow-hidden">
